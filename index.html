@@ -116,6 +116,7 @@
         <div style="flex:1;"><div class="sub">사업자등록번호</div><input class="fld" id="facBiz" placeholder="선택 입력"></div>
       </div>
       <div id="facHint" class="count"></div>
+      <button class="addbtn" id="saveClientBtn" style="display:none;margin-top:8px;" onclick="registerClient()">＋ 이 거래처를 목록에 저장</button>
     </div>
 
     <div id="cards"></div>
@@ -209,7 +210,7 @@
 <div id="toast"></div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzrVPWcK-EH11EPQDcYAZ5kSEZwQfaveZlqeozfFwd3qULVZrEY5fnHy0Avgkoim-PcYg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSI3A6eXvzvyeJe8ACEOr70MFQafPGbU-DGdT48ST8QodIF51vWGfg5U4cGz8kjiXbzA/exec';
 
 const WORKERS = ['조영찬','김수진','오정기'];
 const USERS   = ['이병조','임동훈','이대현','유영선','박현주','장솔이','김승윤'];
@@ -265,13 +266,40 @@ function loadClients(){
 
 function onFacChange(){
   const name=document.getElementById('facInput').value.trim();
+  const btn=document.getElementById('saveClientBtn');
   const c=CLIENTS[name];
   if(c){
     document.getElementById('facAddr').value=c.addr||'';
     document.getElementById('facArea').value=c.area||'';
     document.getElementById('facBiz').value=c.biz||'';
     document.getElementById('facHint').textContent='자동 입력됨 (필요시 수정 가능)';
+    btn.style.display='none';
+  } else if(name){
+    document.getElementById('facHint').textContent='목록에 없는 새 거래처입니다. 소재지 등 입력 후 아래 버튼으로 목록에 저장하세요.';
+    btn.style.display='flex';
+  } else {
+    btn.style.display='none';
   }
+}
+
+/* 새 거래처를 구글 시트 '거래처' 탭에 저장 */
+async function registerClient(){
+  const name=document.getElementById('facInput').value.trim();
+  if(!name){ toast('거래처명을 입력하세요.'); return; }
+  const btn=document.getElementById('saveClientBtn'); const old=btn.textContent;
+  btn.textContent='저장 중…'; btn.disabled=true;
+  const info={ addr:document.getElementById('facAddr').value.trim(), area:document.getElementById('facArea').value.trim(), biz:document.getElementById('facBiz').value.trim() };
+  try{
+    await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({type:'client',name,addr:info.addr,area:info.area,biz:info.biz})});
+    // 로컬 목록에도 즉시 반영
+    CLIENTS[name]={addr:info.addr,area:info.area,biz:info.biz,mgr:''};
+    const dl=document.getElementById('facList');
+    if(![...dl.options].some(o=>o.value===name)){ const o=document.createElement('option'); o.value=name; dl.appendChild(o); }
+    document.getElementById('facHint').textContent='거래처가 목록에 저장되었습니다.';
+    btn.style.display='none';
+    toast('거래처가 목록에 추가되었습니다.');
+  }catch(err){ toast('거래처 저장 실패: '+err.message); }
+  finally{ btn.textContent=old; btn.disabled=false; }
 }
 
 /* ===== 입력 카드 ===== */
