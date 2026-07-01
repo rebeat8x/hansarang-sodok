@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>소독·방역 보고서</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --navy:#0F4C81; --ink:#1a1a1a; --line:#000; --muted:#6B7280;
@@ -415,27 +417,51 @@ function resizeToJpeg(dataUrl, max=1000, q=0.7){
 }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.opacity='1'; clearTimeout(t._t); t._t=setTimeout(()=>{t.style.opacity='0';},4500); }
 
+/* 양식(증명서+기록장)을 A4 PDF로 생성 → base64 반환 */
+async function generatePdf(){
+  const fv=document.getElementById('formView');
+  fv.classList.add('show');
+  fv.style.position='fixed'; fv.style.left='-99999px'; fv.style.top='0'; fv.style.width='840px'; fv.style.zIndex='-1';
+  const pages=[...fv.querySelectorAll('.page')];
+  const { jsPDF }=window.jspdf;
+  const pdf=new jsPDF('p','mm','a4');
+  try{
+    for(let i=0;i<pages.length;i++){
+      pages[i].style.width='794px';
+      const canvas=await html2canvas(pages[i],{scale:2,useCORS:true,backgroundColor:'#ffffff'});
+      const img=canvas.toDataURL('image/jpeg',0.85);
+      let w=210, h=canvas.height*210/canvas.width;
+      if(h>297){ h=297; w=canvas.width*297/canvas.height; }
+      const x=(210-w)/2;
+      if(i>0) pdf.addPage();
+      pdf.addImage(img,'JPEG',x,2,w,h);
+    }
+  } finally {
+    pages.forEach(p=>p.style.width='');
+    fv.classList.remove('show'); fv.style.position=''; fv.style.left=''; fv.style.top=''; fv.style.width=''; fv.style.zIndex='';
+  }
+  return pdf.output('datauristring').split(',')[1];
+}
+
 async function saveToSheet(){
   const name=document.getElementById('facInput').value.trim();
   if(!name){ toast('대상시설을 먼저 선택/입력하세요.'); return; }
   const btn=document.getElementById('saveBtn'); const old=btn.textContent;
-  btn.textContent='저장 중…'; btn.disabled=true;
+  btn.textContent='PDF 생성 중…'; btn.disabled=true;
   try{
-    const rows=[];
-    for(let i=0;i<ROWS.length;i++){
-      const photos=[];
-      for(const d of state[i].photos){ photos.push(await resizeToJpeg(d)); }
-      rows.push({ loc:ROWS[i].key, med:state[i].med, meth:state[i].meth, workers:state[i].workers, users:state[i].users, photos });
-    }
+    fillForm();
+    const pdfB64=await generatePdf();
+    btn.textContent='저장 중…';
+    const rows=ROWS.map((r,i)=>({ loc:r.key, med:state[i].med, meth:state[i].meth, workers:state[i].workers, users:state[i].users }));
     const payload={
       date:todayStr(),
       facility:{ name, addr:document.getElementById('facAddr').value.trim(), area:document.getElementById('facArea').value.trim(), biz:document.getElementById('facBiz').value.trim() },
-      rows
+      rows, pdf:pdfB64
     };
     const res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
     let ok=true; try{const j=await res.json(); ok=j.ok!==false;}catch(_){}
-    toast(ok?'구글 시트에 저장되었습니다.':'저장 실패 — 잠시 후 시트를 확인하세요.');
-  }catch(err){ toast('전송 실패: '+err.message); }
+    toast(ok?'저장 완료 — 기록 탭에 PDF 링크가 들어갔습니다.':'저장 실패 — 잠시 후 시트를 확인하세요.');
+  }catch(err){ toast('실패: '+err.message); }
   finally{ btn.textContent=old; btn.disabled=false; }
 }
 
