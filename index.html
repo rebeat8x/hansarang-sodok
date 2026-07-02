@@ -82,7 +82,7 @@
   .vlabel{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:6px;font-weight:700;}
   .legal{font-size:12.5px;line-height:1.7;text-align:center;padding:14px 6px;}
   .signrow td{height:34px;}
-  .page-log{min-height:1123px;}
+  .page-log{min-height:1123px;box-sizing:border-box;}
   .log-title{text-align:center;font-size:19px;font-weight:800;margin:0 0 12px;}
   .survey{white-space:pre-line;line-height:1.6;font-size:12px;}
   .section-h{text-align:center;font-weight:800;font-size:14px;background:#f0f3f7;}
@@ -153,17 +153,21 @@
     <section class="page page-log doc">
       <div class="log-title">◎ 소독·방역 기록장</div>
       <table>
+        <colgroup>
+          <col style="width:12%"><col style="width:22%"><col style="width:20%">
+          <col style="width:22%"><col style="width:12%"><col style="width:12%">
+        </colgroup>
         <tr>
-          <td class="lbl" style="width:11%">일 시</td><td colspan="2"><span class="f_date"></span></td>
-          <td class="lbl" style="width:11%">날 씨</td><td>맑음</td>
-          <td class="lbl" style="width:11%">시 간</td><td id="f_time">15:00</td>
+          <td class="lbl">일 시</td><td class="center"><span class="f_date"></span></td>
+          <td class="lbl">날 씨</td><td class="center">맑음</td>
+          <td class="lbl">시 간</td><td class="center" id="f_time" style="white-space:nowrap">15:00</td>
         </tr>
         <tr>
           <td class="lbl" rowspan="2">작업자</td>
           <td class="lbl center">대표자</td><td class="lbl center">연락처</td>
           <td class="lbl center">실무자</td><td class="lbl center">연락처</td><td class="lbl center">소재지</td>
         </tr>
-        <tr><td class="center">이영설</td><td class="center">010-8054-1030</td><td class="center" id="f_silmu">조영찬</td><td class="center" id="f_silmu_tel">070-4149-1908</td><td class="center" id="f_addr">수원시</td></tr>
+        <tr><td class="center">이영설</td><td class="center">010-8054-1030</td><td class="center" id="f_silmu">조영찬</td><td class="center" id="f_silmu_tel" style="white-space:nowrap">070-4149-1908</td><td class="center" id="f_addr">수원시</td></tr>
       </table>
       <table style="margin-top:10px;">
         <tr><td class="section-h">조사내용 및 소독·방역</td></tr>
@@ -451,7 +455,7 @@ async function saveToSheet(){
     const certBytes = Uint8Array.from(atob(certJson.certPdf), c=>c.charCodeAt(0));
     const certDoc = await PDFDocument.load(certBytes);
     const out = await PDFDocument.create();
-    if(certJson.coverPdf){ const _cv = await PDFDocument.load(Uint8Array.from(atob(certJson.coverPdf), c=>c.charCodeAt(0))); const _cp = await out.copyPages(_cv, _cv.getPageIndices()); _cp.forEach(p=>out.addPage(p)); }
+    if(certJson.coverPdf){ const _cv = await PDFDocument.load(Uint8Array.from(atob(certJson.coverPdf), c=>c.charCodeAt(0))); const [_cp0] = await out.copyPages(_cv, [0]); out.addPage(_cp0); } // 표지 첫 장만 복사(빈 페이지 방지)
     const cp = await out.copyPages(certDoc, certDoc.getPageIndices());
     cp.forEach(p=>out.addPage(p));
     const jpg = await out.embedJpg(contentImg);
@@ -472,10 +476,4 @@ async function saveToSheet(){
 }
 
 document.getElementById('facInput').addEventListener('change',onFacChange);
-document.getElementById('facInput').addEventListener('input',onFacChange);
-buildCards();
-buildSilmu(); loadClients();
-setTimeout(()=>{const a=document.getElementById('surveyInput'),b=document.getElementById('f_survey');if(a&&b&&!a.value.trim())a.value=b.textContent;},0);
-</script>
-</body>
-</html>
+document.getElementBy
