@@ -476,4 +476,16 @@ async function saveToSheet(){
     const payload = { date: todayStr(), certNo: certNo(), facility:{ name, addr, area, biz }, rows, pdf: mergedB64 };
     const res = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) });
     let ok = true; try{ const j = await res.json(); ok = j.ok !== false; }catch(_){}
-    toast(ok ? '저장 완료 — 기록 탭에 PDF 링크가 들어갔습니다.' : '저장 실패 — 잠시 후 시트
+    toast(ok ? '저장 완료 — 기록 탭에 PDF 링크가 들어갔습니다.' : '저장 실패 — 잠시 후 시트를 확인하세요.');
+  }catch(err){ toast('실패: '+err.message); }
+  finally{ btn.textContent = old; btn.disabled = false; }
+}
+
+document.getElementById('facInput').addEventListener('change',onFacChange);
+document.getElementById('facInput').addEventListener('input',onFacChange);
+buildCards();
+buildSilmu(); loadClients();
+setTimeout(()=>{const a=document.getElementById('surveyInput'),b=document.getElementById('f_survey');if(a&&b&&!a.value.trim())a.value=b.textContent;},0);
+</script>
+</body>
+</html>
